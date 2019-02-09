@@ -1,1 +1,1 @@
-ipython "C:\Users\Lindsay LeBlanc\Desktop\Raman Calculator\RamanCalc.py"
+ipython "Z:\DataAnalysis\RamRF Calculators\RamanCalc.py"
