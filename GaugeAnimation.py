@@ -14,9 +14,12 @@ Created on Fri Feb 08 14:44:41 2019
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
+from time import time
 
 
 def Sort(tab, delta_arr):
+    '''Sorts the eigenenergies into continuous arrays; without this, they sometimes 
+    get scrambled in the diagonalization process'''
     length = tab.shape[0]
     width = tab.shape[1]
     Del = delta_arr[1] - delta_arr[0]
@@ -32,10 +35,13 @@ def Sort(tab, delta_arr):
     return tab
 
 def Ham(k, delta, Omega, epsilon):
+    '''Returns an array representing the Raman hamiltonian for a given time step'''
     Ham = [[(k + 2)**2 - delta, Omega/2, 0], [Omega/2, k**2 - epsilon, Omega/2], [0, Omega/2, (k-2)**2 + delta]]
     return Ham
 
 def Eigen(delta, Omega, epsilon, kArr):
+    '''Diagonalizes the Raman hamiltonian for a given time step, returning 
+    the eigenenergies'''
     values = [] 
     for k in kArr:
         vals = np.linalg.eigvals(Ham(k, delta, Omega, epsilon))
@@ -45,10 +51,10 @@ def Eigen(delta, Omega, epsilon, kArr):
     return np.array(values)
     
 
-filename = 'Test'
-reset = 0
+filename = 'AC_dispersion_calculations'
+reset = 0 #Set to 1 if you want to force recalculate the data
 try:
-    #See if data has already been calculated, or if user desires to do it again
+    #Tries to read the data from a file
     if not reset: 
         data = np.load(filename + '.npz')   
         kArr = data['kArr']
@@ -57,25 +63,24 @@ try:
         tArr = data['tArr']
         dArr = data['dArr']
     else:
-        raise Exception('Going to redo the data...')
+        print('Going to redo the data...')
+        raise Exception()
     
 except:
-    print('...recalculating...')
+    print('...calculating...')
+    #Define quasimomentum array
     Nkpts = 100
     kMax = 4
     kArr = np.linspace(-kMax, kMax, Nkpts)
     
-    
+    #Define time array
     tMin, tMax = 0, 3
-    Ntpts = 100
+    Ntpts = 200 
     tArr = np.linspace(tMin, tMax, Ntpts)
     deltaMax = 5
     deltaArr = deltaMax*np.sin(2*np.pi*tArr)
-    
-    plt.figure()
-    plt.plot(tArr, deltaArr, color='C0')
-    plt.show()
-    
+
+    #Define experimental parameters, and find eigenstates for each time step 
     Omeg = 10
     eps = 0
     values = np.empty((Ntpts, Nkpts, 3),dtype=float)
@@ -84,39 +89,48 @@ except:
         vals = Eigen(delt, Omeg, eps, kArr)
         mins[i] = np.argmin(vals[:,0])
         values[i,:,:] = vals
-        
+    
+    #Save data, so that you don't have to recalculate it each time.
     np.savez(filename, kArr=kArr, vals=values, mins=mins, tArr=tArr, dArr=deltaArr)
 
 finally:
-#    plt.figure()
-#    for vals in values:
-#        plt.plot(kArr, vals)
-#    plt.show()
+    begtime = time()  
+    #Initialize the figure
+    fig1 = plt.figure(figsize=(6,9))
+    fig1.subplots_adjust(top=1.2)
     
-    def update_lines(fnum, kArr, eigs, line0, line1, line2, s0):
+    #Set properties for the top subplot
+    ax1 = fig1.add_subplot(2, 1, 1)
+    dline, = ax1.plot(tArr[0], deltaArr[0], color='k', lw=2)
+    ax1.set_title('AC Detuning \n($\Omega, \epsilon$) = (%i, %i) $E_L$'%(Omeg, eps))
+    ax1.set_xlim(0, tMax)
+    ax1.set_ylim(-deltaMax-1, deltaMax+1)
+    ax1.set_xlabel('Time (au)')
+    ax1.set_ylabel('Detuning ($\delta/E_L$)')
+    
+    #Set properties for the bottom subplot
+    ax2 = fig1.add_subplot(2, 1, 2)
+    l0, l1, l2, = ax2.plot(kArr, values[0,:,:], lw=2)
+    s0 = ax2.scatter(kArr[mins[0]], values[0,mins[0],0], c='red', s=50)
+    ax2.set_xlabel('Quasimomentum ($q/k_L$)')
+    ax2.set_ylabel('Energy ($E_L$)')
+    
+    plt.tight_layout()
+    
+    #Animate and save the function
+    def update_lines(fnum, kArr, eigs, tArr, dArr, line0, line1, line2, s0, dline):
+        '''This is the animator function and updates the plot at each frame'''
         line0.set_ydata(eigs[fnum,:,0])
         line1.set_ydata(eigs[fnum,:,1])
         line2.set_ydata(eigs[fnum,:,2])
-        s0.set_offsets(np.hstack((kArr[mins[fnum], np.newaxis], values[fnum,mins[fnum],0, np.newaxis])))
+        s0.set_offsets(np.hstack((kArr[mins[fnum], np.newaxis], 
+                                  values[fnum,mins[fnum],0, np.newaxis]))) #This is a weird line, but it works.
+        dline.set_data(tArr[:fnum], deltaArr[:fnum])
         return line0, line1, line2, s0,
-        
-
-        
-    fig1 = plt.figure()
-    init = np.full(Nkpts, np.nan)
-    l0, l1, l2, = plt.plot(kArr, values[0,:,:])
-    s0 = plt.scatter(kArr[mins[0]], values[0,mins[0],0], c='red')
-    plt.xlabel('Quasimomentum ($q/k_L$)')
-    plt.ylabel('Energy ($E_L$)')
     
-#    def init():
-#        l0.set_ydata([np.nan]*len(kArr))
-#        l1.set_ydata([np.nan]*len(kArr))
-#        l2.set_ydata([np.nan]*len(kArr))
-#        return l0, l1, l2,
-    
-    line_ani = animation.FuncAnimation(fig1, update_lines, Ntpts, fargs=(kArr, values, l0, l1, l2, s0), interval=100, blit=True)
-    line_ani.save('lines.mp4')
-    
-    
+    line_ani = animation.FuncAnimation(fig1, update_lines, Ntpts, 
+                                       fargs=(kArr, values, tArr, deltaArr, l0, l1, l2, s0, dline), 
+                                       interval=100, blit=True)
+    line_ani.save('AC_dispersion_animation.mp4')
+    print("Duration: ", time() - begtime)
 
