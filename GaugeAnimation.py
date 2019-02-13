@@ -52,7 +52,7 @@ def Eigen(delta, Omega, epsilon, kArr):
     
 
 filename = 'AC_dispersion_calculations'
-reset = 0 #Set to 1 if you want to force recalculate the data
+reset = 1 #Set to 1 if you want to force recalculate the data
 try:
     #Tries to read the data from a file
     if not reset: 
@@ -131,6 +131,6 @@ finally:
     line_ani = animation.FuncAnimation(fig1, update_lines, Ntpts, 
                                        fargs=(kArr, values, tArr, deltaArr, l0, l1, l2, s0, dline), 
                                        interval=100, blit=True)
-    line_ani.save('AC_dispersion_animation.mp4')
+    line_ani.save('AC_dispersion_animation.mp4', writer='ffmpeg')
     print("Duration: ", time() - begtime)
 

@@ -1,25 +1,25 @@
 import sys
-from PyQt4 import QtGui, uic
-#from PyQt4.QtWidgets import QVBoxLayout
+from PyQt5 import QtGui, uic
+from PyQt5.QtWidgets import QVBoxLayout, QApplication, QMainWindow
 
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Circle
-from matplotlib.backends.backend_qt4agg import (
+from matplotlib.backends.backend_qt5agg import (
 	FigureCanvasQTAgg as FigureCanvas,
 	NavigationToolbar2QT as NavigationToolbar)
 from scipy.optimize import curve_fit
 from decimal import Decimal
 #import time
 
-class MyWindow(QtGui.QMainWindow):
+class MyWindow(QMainWindow):
     def __init__(self):
         super(MyWindow, self).__init__()
         uic.loadUi('RFCouplingUI.ui', self)
         self.figure = plt.Figure()
         self.canvas = FigureCanvas(self.figure)
         #self.toolbar = NavigationToolbar(self.canvas, self)
-        self.plot_layout = QtGui.QVBoxLayout()        
+        self.plot_layout = QVBoxLayout()        
         self.plot_layout.addWidget(self.canvas)        
         #self.plot_layout.addWidget(self.toolbar)        
         self.gridLayout_2.addLayout(self.plot_layout, 1, 2, 1, 1)
@@ -178,6 +178,6 @@ class MyWindow(QtGui.QMainWindow):
         
 if __name__ == '__main__':
     app = 0    
-    app = QtGui.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     window = MyWindow()
     sys.exit(app.exec_())
