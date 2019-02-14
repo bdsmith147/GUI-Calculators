@@ -15,6 +15,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from time import time
+from scipy.optimize import curve_fit
 
 
 def Sort(tab, delta_arr):
@@ -50,6 +51,9 @@ def Eigen(delta, Omega, epsilon, kArr):
     values = Sort(values, kArr)
     return np.array(values)
     
+def parabola(x, A, x0, y0):
+        return A**2 * (x - x0)**2 + y0
+    
 
 filename = 'AC_dispersion_calculations'
 reset = 1 #Set to 1 if you want to force recalculate the data
@@ -62,6 +66,7 @@ try:
         mins = data['mins']
         tArr = data['tArr']
         dArr = data['dArr']
+        params = data['params']
     else:
         print('Going to redo the data...')
         raise Exception()
@@ -79,19 +84,26 @@ except:
     tArr = np.linspace(tMin, tMax, Ntpts)
     deltaMax = 5
     deltaArr = deltaMax*np.sin(2*np.pi*tArr)
-
+    window = 20    
+    
     #Define experimental parameters, and find eigenstates for each time step 
     Omeg = 10
     eps = 0
     values = np.empty((Ntpts, Nkpts, 3),dtype=float)
     mins = np.empty((Ntpts), dtype=int)
+    params = np.empty((Ntpts, 3))
     for i, delt in enumerate(deltaArr):
         vals = Eigen(delt, Omeg, eps, kArr)
-        mins[i] = np.argmin(vals[:,0])
+        minelem = np.argmin(vals[:,0])
+        mins[i] = minelem
         values[i,:,:] = vals
-    
+        guess = [1, kArr[minelem], vals[minelem,0]]
+        fitx, fity = kArr[minelem-window:minelem+window], vals[minelem-window:minelem+window,0]
+        popt, pcov = curve_fit(parabola, fitx, fity, guess)
+        params[i,:] = popt
+        #print(popt)
     #Save data, so that you don't have to recalculate it each time.
-    np.savez(filename, kArr=kArr, vals=values, mins=mins, tArr=tArr, dArr=deltaArr)
+    np.savez(filename, kArr=kArr, vals=values, mins=mins, tArr=tArr, dArr=deltaArr, params=popt)
 
 finally:
     begtime = time()  
@@ -112,6 +124,7 @@ finally:
     ax2 = fig1.add_subplot(2, 1, 2)
     l0, l1, l2, = ax2.plot(kArr, values[0,:,:], lw=2)
     s0 = ax2.scatter(kArr[mins[0]], values[0,mins[0],0], c='red', s=50)
+    fit = ax2.plot(kArr, parabola(kArr, params*))
     ax2.set_xlabel('Quasimomentum ($q/k_L$)')
     ax2.set_ylabel('Energy ($E_L$)')
     
