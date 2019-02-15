@@ -124,25 +124,26 @@ finally:
     ax2 = fig1.add_subplot(2, 1, 2)
     l0, l1, l2, = ax2.plot(kArr, values[0,:,:], lw=2)
     s0 = ax2.scatter(kArr[mins[0]], values[0,mins[0],0], c='red', s=50)
-    fit = ax2.plot(kArr, parabola(kArr, params*))
+    fit, = ax2.plot(kArr, parabola(kArr, *params[0]), 'k--', lw=1)
     ax2.set_xlabel('Quasimomentum ($q/k_L$)')
     ax2.set_ylabel('Energy ($E_L$)')
     
     plt.tight_layout()
     
     #Animate and save the function
-    def update_lines(fnum, kArr, eigs, tArr, dArr, line0, line1, line2, s0, dline):
+    def update_lines(fnum, kArr, eigs, tArr, dArr, line0, line1, line2, s0, dline, fit):
         '''This is the animator function and updates the plot at each frame'''
         line0.set_ydata(eigs[fnum,:,0])
         line1.set_ydata(eigs[fnum,:,1])
         line2.set_ydata(eigs[fnum,:,2])
         s0.set_offsets(np.hstack((kArr[mins[fnum], np.newaxis], 
                                   values[fnum,mins[fnum],0, np.newaxis]))) #This is a weird line, but it works.
+        fit.set_ydata(parabola(kArr, *params[fnum]))
         dline.set_data(tArr[:fnum], deltaArr[:fnum])
         return line0, line1, line2, s0,
     
     line_ani = animation.FuncAnimation(fig1, update_lines, Ntpts, 
-                                       fargs=(kArr, values, tArr, deltaArr, l0, l1, l2, s0, dline), 
+                                       fargs=(kArr, values, tArr, deltaArr, l0, l1, l2, s0, dline, fit), 
                                        interval=100, blit=True)
     line_ani.save('AC_dispersion_animation.mp4', writer='ffmpeg')
     print("Duration: ", time() - begtime)
