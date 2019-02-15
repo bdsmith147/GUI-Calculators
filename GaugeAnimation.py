@@ -4,12 +4,9 @@ Created on Fri Feb 08 14:44:41 2019
 
 @author: Lindsay LeBlanc
 """
-#Goals Saturday 20190209:
-#   1. Get the code to output and save as np arrays multiple dispersions based on an
-#   AC detuning
-#   2. Load the np arrays and animate the graph; show the AC detuning at
-#   the same time as another subplot
-#   3. Run this code on a remote machine, i.e. Joseph's. Learn how to do that well
+#Goals:
+#   1. Plot the kmin, m* and Emin as a function of time
+#   2. Run this code on a remote machine, i.e. Joseph's. Learn how to do that well. Retrieve the results.
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -80,7 +77,7 @@ except:
     
     #Define time array
     tMin, tMax = 0, 3
-    Ntpts = 200 
+    Ntpts = 100 
     tArr = np.linspace(tMin, tMax, Ntpts)
     deltaMax = 5
     deltaArr = deltaMax*np.sin(2*np.pi*tArr)
@@ -123,7 +120,7 @@ finally:
     #Set properties for the bottom subplot
     ax2 = fig1.add_subplot(2, 1, 2)
     l0, l1, l2, = ax2.plot(kArr, values[0,:,:], lw=2)
-    s0 = ax2.scatter(kArr[mins[0]], values[0,mins[0],0], c='red', s=50)
+    s0 = ax2.scatter(params[0,1], params[0,2], c='red', s=50)
     fit, = ax2.plot(kArr, parabola(kArr, *params[0]), 'k--', lw=1)
     ax2.set_xlabel('Quasimomentum ($q/k_L$)')
     ax2.set_ylabel('Energy ($E_L$)')
@@ -136,8 +133,8 @@ finally:
         line0.set_ydata(eigs[fnum,:,0])
         line1.set_ydata(eigs[fnum,:,1])
         line2.set_ydata(eigs[fnum,:,2])
-        s0.set_offsets(np.hstack((kArr[mins[fnum], np.newaxis], 
-                                  values[fnum,mins[fnum],0, np.newaxis]))) #This is a weird line, but it works.
+        s0.set_offsets(np.hstack((params[fnum,1, np.newaxis], 
+                                  params[fnum,2, np.newaxis]))) #This is a weird line, but it works.
         fit.set_ydata(parabola(kArr, *params[fnum]))
         dline.set_data(tArr[:fnum], deltaArr[:fnum])
         return line0, line1, line2, s0,
