@@ -77,7 +77,7 @@ except:
     
     #Define time array
     tMin, tMax = 0, 3
-    Ntpts = 100 
+    Ntpts = 50 
     tArr = np.linspace(tMin, tMax, Ntpts)
     deltaMax = 5
     deltaArr = deltaMax*np.sin(2*np.pi*tArr)
