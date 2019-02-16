@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 from time import time
 from scipy.optimize import curve_fit
+import matplotlib.gridspec as gridspec
 
 
 def Sort(tab, delta_arr):
@@ -49,7 +50,7 @@ def Eigen(delta, Omega, epsilon, kArr):
     return np.array(values)
     
 def parabola(x, A, x0, y0):
-        return A**2 * (x - x0)**2 + y0
+        return A * (x - x0)**2 + y0
     
 
 filename = 'AC_dispersion_calculations'
@@ -71,17 +72,17 @@ try:
 except:
     print('...calculating...')
     #Define quasimomentum array
-    Nkpts = 100
+    Nkpts = 200
     kMax = 4
     kArr = np.linspace(-kMax, kMax, Nkpts)
     
     #Define time array
     tMin, tMax = 0, 3
-    Ntpts = 50 
+    Ntpts = 200 
     tArr = np.linspace(tMin, tMax, Ntpts)
-    deltaMax = 5
+    deltaMax = 1
     deltaArr = deltaMax*np.sin(2*np.pi*tArr)
-    window = 20    
+    window = 50    
     
     #Define experimental parameters, and find eigenstates for each time step 
     Omeg = 10
@@ -100,16 +101,31 @@ except:
         params[i,:] = popt
         #print(popt)
     #Save data, so that you don't have to recalculate it each time.
-    np.savez(filename, kArr=kArr, vals=values, mins=mins, tArr=tArr, dArr=deltaArr, params=popt)
+    np.savez(filename, kArr=kArr, vals=values, mins=mins, tArr=tArr, dArr=deltaArr, params=params)
 
 finally:
     begtime = time()  
     #Initialize the figure
-    fig1 = plt.figure(figsize=(6,9))
-    fig1.subplots_adjust(top=1.2)
+    fig1 = plt.figure(figsize=(9,9))
+#    fig1.subplots_adjust(top=1.2)
+    gs = gridspec.GridSpec(1, 2, figure=fig1)
+    gs0 = gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs[0])
+    gs1 = gridspec.GridSpecFromSubplotSpec(3, 1, subplot_spec=gs[1])
+    
+    ax1 = plt.Subplot(fig1, gs0[0])
+    ax2 = plt.Subplot(fig1, gs0[1:])
+    
+    ax3 = plt.Subplot(fig1, gs1[0])
+    ax4 = plt.Subplot(fig1, gs1[1])
+    ax5 = plt.Subplot(fig1, gs1[2])
+    fig1.add_subplot(ax1)
+    fig1.add_subplot(ax2)
+    fig1.add_subplot(ax3)
+    fig1.add_subplot(ax4)
+    fig1.add_subplot(ax5)
     
     #Set properties for the top subplot
-    ax1 = fig1.add_subplot(2, 1, 1)
+    #ax1 = fig1.add_subplot(2, 1, 1)
     dline, = ax1.plot(tArr[0], deltaArr[0], color='k', lw=2)
     ax1.set_title('AC Detuning \n($\Omega, \epsilon$) = (%i, %i) $E_L$'%(Omeg, eps))
     ax1.set_xlim(0, tMax)
@@ -118,12 +134,38 @@ finally:
     ax1.set_ylabel('Detuning ($\delta/E_L$)')
     
     #Set properties for the bottom subplot
-    ax2 = fig1.add_subplot(2, 1, 2)
+    #ax2 = fig1.add_subplot(2, 1, 2)
     l0, l1, l2, = ax2.plot(kArr, values[0,:,:], lw=2)
     s0 = ax2.scatter(params[0,1], params[0,2], c='red', s=50)
     fit, = ax2.plot(kArr, parabola(kArr, *params[0]), 'k--', lw=1)
     ax2.set_xlabel('Quasimomentum ($q/k_L$)')
     ax2.set_ylabel('Energy ($E_L$)')
+    
+    
+    kline, = ax3.plot(tArr[0], params[0,1], color='r', lw=2)
+    eline, = ax4.plot(tArr[0], params[0,2], color='r', lw=2)
+    mline, = ax5.plot(tArr[0], 1/params[0,0], color='r', lw=2)
+    kmax = np.max(params[:,1])
+    Emin, Emax = np.min(params[:,2]), np.max(params[:,2])
+    Ewidth = Emax - Emin
+    mmin, mmax = np.min(1/params[:,0]), np.max(1/params[:,0])
+    mwidth = mmax - mmin
+    
+    ax3.set_xlim(0, tMax)
+    ax3.set_ylim(-1.1*kmax, 1.1*kmax)
+    ax3.set_xlabel('Time (au)')
+    ax3.set_ylabel('$k_min$ ($k/k_L$)')
+    
+    ax4.set_xlim(0, tMax)
+    ax4.set_ylim(Emin - Ewidth*0.1, Emax + Ewidth*0.1)
+    ax4.set_xlabel('Time (au)')
+    ax4.set_ylabel('Min. Energy ($E_{min}/E_L$)')
+    
+    ax5.set_xlim(0, tMax)
+    ax5.set_ylim(mmin - mwidth*0.1, mmax + mwidth*0.1)
+    ax5.set_xlabel('Time (au)')
+    ax5.set_ylabel('Eff. Mass $m^*$, (au)')
+    
     
     plt.tight_layout()
     
@@ -137,11 +179,15 @@ finally:
                                   params[fnum,2, np.newaxis]))) #This is a weird line, but it works.
         fit.set_ydata(parabola(kArr, *params[fnum]))
         dline.set_data(tArr[:fnum], deltaArr[:fnum])
+        kline.set_data(tArr[:fnum], params[:fnum,1])
+        eline.set_data(tArr[:fnum], params[:fnum,2])
+        mline.set_data(tArr[:fnum], 1/params[:fnum,0])
         return line0, line1, line2, s0,
     
     line_ani = animation.FuncAnimation(fig1, update_lines, Ntpts, 
                                        fargs=(kArr, values, tArr, deltaArr, l0, l1, l2, s0, dline, fit), 
                                        interval=100, blit=True)
+    print("Saving...")
     line_ani.save('AC_dispersion_animation.mp4', writer='ffmpeg')
     print("Duration: ", time() - begtime)
-
+    
