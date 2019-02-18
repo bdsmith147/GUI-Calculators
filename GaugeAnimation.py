@@ -72,17 +72,17 @@ try:
 except:
     print('...calculating...')
     #Define quasimomentum array
-    Nkpts = 200
+    Nkpts = 400
     kMax = 4
     kArr = np.linspace(-kMax, kMax, Nkpts)
     
     #Define time array
-    tMin, tMax = 0, 3
+    tMin, tMax = 0, 1.5
     Ntpts = 200 
     tArr = np.linspace(tMin, tMax, Ntpts)
-    deltaMax = 1
+    deltaMax = 2
     deltaArr = deltaMax*np.sin(2*np.pi*tArr)
-    window = 50    
+    window = 10    
     
     #Define experimental parameters, and find eigenstates for each time step 
     Omeg = 10
@@ -90,6 +90,7 @@ except:
     values = np.empty((Ntpts, Nkpts, 3),dtype=float)
     mins = np.empty((Ntpts), dtype=int)
     params = np.empty((Ntpts, 3))
+    resids = np.empty(Ntpts)
     for i, delt in enumerate(deltaArr):
         vals = Eigen(delt, Omeg, eps, kArr)
         minelem = np.argmin(vals[:,0])
@@ -99,6 +100,12 @@ except:
         fitx, fity = kArr[minelem-window:minelem+window], vals[minelem-window:minelem+window,0]
         popt, pcov = curve_fit(parabola, fitx, fity, guess)
         params[i,:] = popt
+        resids[i] = np.sqrt(np.sum(np.abs(parabola(fitx, *popt) - fity)**2))
+#        if i%20 == 0:
+#            plt.figure()
+#            plt.scatter(fitx, fity)
+#            plt.plot(fitx, parabola(fitx, *popt))
+#            plt.show()        
         #print(popt)
     #Save data, so that you don't have to recalculate it each time.
     np.savez(filename, kArr=kArr, vals=values, mins=mins, tArr=tArr, dArr=deltaArr, params=params)
@@ -164,7 +171,7 @@ finally:
     ax5.set_xlim(0, tMax)
     ax5.set_ylim(mmin - mwidth*0.1, mmax + mwidth*0.1)
     ax5.set_xlabel('Time (au)')
-    ax5.set_ylabel('Eff. Mass $m^*$, (au)')
+    ax5.set_ylabel('Eff. Mass $m^*$ (au)')
     
     
     plt.tight_layout()
@@ -187,7 +194,11 @@ finally:
     line_ani = animation.FuncAnimation(fig1, update_lines, Ntpts, 
                                        fargs=(kArr, values, tArr, deltaArr, l0, l1, l2, s0, dline, fit), 
                                        interval=100, blit=True)
-    print("Saving...")
-    line_ani.save('AC_dispersion_animation.mp4', writer='ffmpeg')
+    print("Generating animation...")
+    line_ani.save('AC_dispersion_animation0.mp4', writer='ffmpeg')
     print("Duration: ", time() - begtime)
+    
+    plt.figure()
+    plt.plot(tArr, resids)
+    plt.show()
     
